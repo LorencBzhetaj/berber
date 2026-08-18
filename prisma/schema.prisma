@@ -1,0 +1,169 @@
+// Barber House — demo booking system
+// SQLite for the demo; schema kept clean for a future PostgreSQL migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Barber {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  displayName String
+  phone       String?
+  email       String?
+  photoUrl    String?
+  bio         String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services     BarberService[]
+  workingHours WorkingHour[]
+  daysOff      DayOff[]
+  vacations    Vacation[]
+  appointments Appointment[]
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  durationMinutes Int
+  price           Float
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  barbers      BarberService[]
+  appointments Appointment[]
+}
+
+// Many-to-many join with optional per-barber price/duration overrides.
+model BarberService {
+  id               String @id @default(cuid())
+  barberId         String
+  serviceId        String
+  priceOverride    Float?
+  durationOverride Int?
+
+  barber  Barber  @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([barberId, serviceId])
+  @@index([serviceId])
+}
+
+model WorkingHour {
+  id        String  @id @default(cuid())
+  barberId  String
+  dayOfWeek Int // 0 = Sunday ... 6 = Saturday
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+  isActive  Boolean @default(true)
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, dayOfWeek])
+}
+
+model DayOff {
+  id       String   @id @default(cuid())
+  barberId String
+  date     DateTime // stored at local midnight
+  reason   String?
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, date])
+}
+
+model Vacation {
+  id        String   @id @default(cuid())
+  barberId  String
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+
+  barber Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId])
+}
+
+model Customer {
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  phone          String
+  whatsappNumber String?
+  email          String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([phone])
+}
+
+model Appointment {
+  id              String   @id @default(cuid())
+  barberId        String
+  customerId      String
+  serviceId       String
+  startDateTime   DateTime
+  endDateTime     DateTime
+  status          String   @default("Confirmed") // Confirmed | Completed | Cancelled | NoShow
+  price           Float
+  durationMinutes Int
+  notes           String?
+  source          String   @default("Online") // Online | WalkIn
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  barber        Barber         @relation(fields: [barberId], references: [id])
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  service       Service        @relation(fields: [serviceId], references: [id])
+  notifications Notification[]
+
+  @@index([barberId, startDateTime])
+  @@index([startDateTime])
+  @@index([customerId])
+  @@index([status])
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  appointmentId String
+  type          String // BookingConfirmation | Reminder24h | Reminder2h | Cancellation | Reschedule | Completed | NoShow
+  channel       String   @default("WhatsApp")
+  status        String   @default("Sent") // Sent | Pending | Failed
+  message       String
+  recipient     String
+  createdAt     DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+}
+
+model ShopSetting {
+  id                String   @id @default(cuid())
+  shopName          String
+  phone             String?
+  whatsapp          String?
+  address           String?
+  email             String?
+  currency          String   @default("EUR")
+  bookingInterval   Int      @default(30) // minutes
+  cancellationHours Int      @default(2)
+  timezone          String   @default("Europe/Tirane")
+  updatedAt         DateTime @updatedAt
+}
