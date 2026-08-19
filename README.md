@@ -2,13 +2,13 @@
 
 A polished, fully-functional demo of a barber-shop booking product for **Barber House**, Tirana. It pairs a premium public booking website with a complete admin dashboard, backed by a real database and a working availability engine.
 
-> This is a sales/prototype demo. It intentionally omits multi-tenancy, real payments, real WhatsApp API, and authentication. The architecture is kept clean so it can later migrate to PostgreSQL and a production backend.
+> This is a sales/prototype demo. It intentionally omits multi-tenancy, real payments, real WhatsApp API, and authentication. It runs on PostgreSQL and deploys to Vercel.
 
 ## Tech stack
 
 - **Next.js 16** (App Router) + **TypeScript**
 - **Tailwind CSS v4** + **shadcn/ui** (Radix)
-- **Prisma** ORM + **SQLite** (demo database)
+- **Prisma** ORM + **PostgreSQL** (Neon in the cloud; any Postgres locally)
 - **React Hook Form** + **Zod** for forms & validation
 - **Recharts** for dashboard analytics
 - Server Actions for all mutations
@@ -35,11 +35,13 @@ A polished, fully-functional demo of a barber-shop booking product for **Barber 
 - **Settings** — shop details & booking rules (persisted to the database)
 - Simulated WhatsApp notifications shown on each appointment
 
-## Getting started
+## Getting started (local)
+
+Set `DATABASE_URL` in a `.env` file (copy `.env.example`) to your Postgres/Neon connection string, then:
 
 ```bash
 npm install
-npx prisma migrate dev        # create the SQLite database
+npx prisma migrate deploy     # apply the schema to your database
 npm run db:seed               # load realistic demo data
 npm run dev                   # http://localhost:3000
 ```
@@ -47,11 +49,18 @@ npm run dev                   # http://localhost:3000
 - Public site: **http://localhost:3000**
 - Admin dashboard: **http://localhost:3000/dashboard**
 
-Reset the demo data at any time:
+Reset / refresh the demo data at any time (re-anchors the "today" appointments to the current date):
 
 ```bash
-npm run db:reset              # re-runs migrations + seed
+npm run db:seed
 ```
+
+## Deploying to Vercel
+
+1. Create a Postgres database (Neon or Vercel Postgres) and copy its connection string.
+2. In the Vercel project → **Settings → Environment Variables**, add `DATABASE_URL` for **Production, Preview and Development**.
+3. Deploy. The build runs `prisma generate && prisma migrate deploy && next build`, so the schema is applied automatically.
+4. Seed the data once (from your machine, with `DATABASE_URL` pointing at the same database): `npm run db:seed`.
 
 ## Demo flow
 
@@ -88,6 +97,6 @@ src/
 
 ## Notes on production readiness
 
-- **Database**: switch `provider` in `prisma/schema.prisma` from `sqlite` to `postgresql`, update `DATABASE_URL`, and re-run migrations.
+- **Database**: runs on PostgreSQL. Point `DATABASE_URL` at a pooled connection for serverless (e.g. Neon's pooled URL) if you expect real traffic.
 - **Notifications**: `src/lib/notifications.ts` is a mock. Replace the body of `sendNotification` with a real WhatsApp / SMS / email provider — the rest of the app is unchanged.
 - **Auth**: the admin dashboard is open in the demo; add authentication before deploying.
