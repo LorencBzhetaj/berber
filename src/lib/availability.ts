@@ -69,6 +69,7 @@ export async function getSlotsForBarber(params: {
   dateStr: string; // "YYYY-MM-DD"
   interval?: number;
   now?: Date;
+  ignoreAppointmentId?: string;
 }): Promise<Date[]> {
   const { barberId, serviceId, dateStr } = params;
   const now = params.now ?? new Date();
@@ -114,6 +115,7 @@ export async function getSlotsForBarber(params: {
     where: {
       barberId,
       status: { not: "Cancelled" },
+      id: params.ignoreAppointmentId ? { not: params.ignoreAppointmentId } : undefined,
       startDateTime: { lte: dayEnd },
       endDateTime: { gte: dayStart },
     },
@@ -182,6 +184,7 @@ export async function getAvailability(params: {
   barberId: string; // concrete id or "any"
   dateStr: string;
   now?: Date;
+  ignoreAppointmentId?: string;
 }): Promise<SlotResult[]> {
   if (params.barberId === "any") {
     return getSlotsAnyBarber({ serviceId: params.serviceId, dateStr: params.dateStr, now: params.now });
@@ -191,6 +194,7 @@ export async function getAvailability(params: {
     serviceId: params.serviceId,
     dateStr: params.dateStr,
     now: params.now,
+    ignoreAppointmentId: params.ignoreAppointmentId,
   });
   return slots.map((s) => ({
     time: `${pad2(s.getHours())}:${pad2(s.getMinutes())}`,

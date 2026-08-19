@@ -137,13 +137,15 @@ export async function getCustomerDetail(id: string) {
   };
 }
 
-export async function getAppointments(filter?: { status?: string; search?: string }) {
+export async function getAppointments() {
   return prisma.appointment.findMany({
-    where: {
-      status: filter?.status && filter.status !== "all" ? filter.status : undefined,
-    },
     orderBy: { startDateTime: "desc" },
-    include: { customer: true, barber: true, service: true },
+    include: {
+      customer: true,
+      barber: true,
+      service: true,
+      notifications: { orderBy: { createdAt: "desc" } },
+    },
   });
 }
 

@@ -204,7 +204,7 @@ async function main() {
   };
   const appts: ApptPayload[] = [];
 
-  for (let offset = -14; offset <= 10; offset++) {
+  for (let offset = -21; offset <= 12; offset++) {
     const day = addDays(today, offset);
     const dow = day.getDay();
     const periods = SCHEDULE[dow];
@@ -216,9 +216,9 @@ async function main() {
       // Today is the busiest; taper off into past and future so the
       // dataset always has completed history AND upcoming appointments.
       let count: number;
-      if (offset === 0) count = randInt(2, 3);
+      if (offset === 0) count = randInt(3, 5);
       else if (offset > 0) count = rnd() < 0.5 ? 1 : 0;
-      else count = rnd() < 0.5 ? 1 : 0;
+      else count = rnd() < 0.6 ? 1 : rnd() < 0.85 ? 2 : 0;
 
       let made = 0, attempts = 0;
       while (made < count && attempts < 25) {
@@ -236,10 +236,16 @@ async function main() {
         bookedByBarber[barber.id].push({ s, e });
         made++;
 
+        // Deterministic, "populated now" statuses:
+        //  - past days: mostly completed, some cancelled / no-show
+        //  - today: morning appointments already completed, rest confirmed
+        //  - future: confirmed
         let status: string;
-        if (e < now) {
+        if (offset < 0) {
           const r = rnd();
           status = r < 0.82 ? "Completed" : r < 0.93 ? "Cancelled" : "NoShow";
+        } else if (offset === 0) {
+          status = s.getHours() < 13 ? "Completed" : "Confirmed";
         } else {
           status = "Confirmed";
         }
